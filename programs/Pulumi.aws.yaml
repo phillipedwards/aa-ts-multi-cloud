@@ -1,0 +1,5 @@
+config:
+  aws:profile: pulumi-ce
+  aws:region: us-west-2
+  mulit-cloud:cloud-provider: aws
+  mulit-cloud:content: <h1>hi aws </h1>

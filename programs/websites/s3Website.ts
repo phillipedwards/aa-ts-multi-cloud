@@ -13,17 +13,18 @@ export class S3Website extends pulumi.ComponentResource {
     constructor(name: string, args: S3WebsiteArgs, opts?: pulumi.ComponentResourceOptions) {
         super("website:aws:s3Website", name, args, opts);
 
+        opts = pulumi.mergeOptions(opts, { parent: this, deleteBeforeReplace: true });
         const { content, stackName, tags } = args;
         const siteBucket = new s3.BucketV2(`${stackName}-bucket`, {
             tags: tags
-        });
+        }, opts);
 
         const bucketControls = new s3.BucketOwnershipControls(`${stackName}-controls`, {
             bucket: siteBucket.bucket,
             rule: {
                 objectOwnership: "BucketOwnerPreferred",
             },
-        }, { deleteBeforeReplace: true });
+        }, opts);
 
         const bucketAccess = new s3.BucketPublicAccessBlock(`${stackName}-access`, {
             bucket: siteBucket.bucket,
@@ -31,13 +32,13 @@ export class S3Website extends pulumi.ComponentResource {
             blockPublicPolicy: false,
             ignorePublicAcls: false,
             restrictPublicBuckets: false
-        }, { deleteBeforeReplace: true });
+        }, opts);
 
         new s3.BucketAclV2(`${stackName}-acl`, {
             bucket: siteBucket.bucket,
             acl: "public-read"
         }, {
-            deleteBeforeReplace: true,
+            ...opts,
             dependsOn: [bucketControls, bucketAccess]
         });
 
@@ -49,7 +50,7 @@ export class S3Website extends pulumi.ComponentResource {
             errorDocument: {
                 key: "index.html",
             }
-        }, { deleteBeforeReplace: true });
+        }, opts);
 
         // write our index.html into the site bucket
         new s3.BucketObjectv2("index", {
@@ -57,7 +58,7 @@ export class S3Website extends pulumi.ComponentResource {
             content: content,
             contentType: "text/html; charset=utf-8",
             key: "index.html"
-        }, { deleteBeforeReplace: true });
+        }, opts);
 
         const policy = pulumi.jsonStringify({
             Version: "2012-10-17",
@@ -77,7 +78,10 @@ export class S3Website extends pulumi.ComponentResource {
         new s3.BucketPolicy("bucketPolicy", {
             bucket: siteBucket.bucket, // refer to the bucket created earlier
             policy: policy // use output property `siteBucket.bucket`
-        }, { dependsOn: [bucketAccess, bucketControls] });
+        }, {
+            ...opts,
+            dependsOn: [bucketAccess, bucketControls]
+        });
 
         this.websiteUrl = website.websiteEndpoint;
     }
