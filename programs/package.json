@@ -1,0 +1,13 @@
+{
+    "name": "storage",
+    "main": "index.ts",
+    "devDependencies": {
+        "@types/node": "^16"
+    },
+    "dependencies": {
+        "@pulumi/aws": "^5.41.0",
+        "@pulumi/gcp": "^6.56.0",
+        "@pulumi/pulumi": "^3.68.0",
+        "@pulumi/synced-folder": "^0.10.2"
+    }
+}

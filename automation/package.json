@@ -1,0 +1,21 @@
+{
+  "name": "aa-ts-multi-cloud",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsc && node ./bin/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@pulumi/aws": "^5.41.0",
+    "@pulumi/pulumi": "^3.68.0",
+    "@types/express": "4.17.2",
+    "@types/express-serve-static-core": "4.17.20",
+    "@types/node": "^14.11.7",
+    "express": "^4.17.2"
+  }
+}
