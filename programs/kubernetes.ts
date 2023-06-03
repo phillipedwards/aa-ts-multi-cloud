@@ -8,6 +8,7 @@ export interface NginxArgs {
 export class Nginx extends pulumi.ComponentResource {
 
     public readonly endpoint: pulumi.Output<string>;
+    public readonly ip: pulumi.Output<string>;
 
     constructor(name: string, args: NginxArgs, opts?: pulumi.ComponentResourceOptions) {
         super("kubernetes:k8s:ingress", name, args, opts);
@@ -24,7 +25,7 @@ export class Nginx extends pulumi.ComponentResource {
             metadata: {
                 name: namespaceName
             }
-        }, { provider: provider });
+        }, pulumi.mergeOptions(opts, { deleteBeforeReplace: true }));
 
         // Create a NGINX Deployment
         const appLabels = { appClass: name };
@@ -70,6 +71,8 @@ export class Nginx extends pulumi.ComponentResource {
             }, opts
         );
 
-        this.endpoint = service.status.loadBalancer.ingress[0].hostname;
+        const ingress = service.status.loadBalancer.ingress[0];
+        this.endpoint = ingress.hostname;
+        this.ip = ingress.ip;
     }
 }

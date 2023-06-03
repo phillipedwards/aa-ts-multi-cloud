@@ -21,7 +21,8 @@ export = async () => {
         webSiteUrl?: pulumi.Output<string>;
         kubeConfig?: pulumi.Output<string>;
         clusterEndpoint?: pulumi.Output<string>;
-        serviceEndpoint?: pulumi.Output<string>
+        serviceEndpoint?: pulumi.Output<string>;
+        serviceIp?: pulumi.Output<string>;
         vpcId?: pulumi.Output<string>;
     } = {};
 
@@ -78,14 +79,13 @@ export = async () => {
             throw new Error(`Unsupported cloud ${cloud} encountered. Use AWS or GCP`);
     }
 
-    stackOutput.kubeConfig?.apply(s => console.log(s));
-
     // Using the kubeconfig from either EKS or GKE we will construct simple k8s nginx example
     const nginx = new Nginx("nginx", {
         kubeConfig: stackOutput.kubeConfig!
     });
 
     stackOutput.serviceEndpoint = nginx.endpoint;
+    stackOutput.serviceIp = nginx.ip;
 
     return stackOutput;
 };
