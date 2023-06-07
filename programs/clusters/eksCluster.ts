@@ -5,6 +5,8 @@ import * as awsx from "@pulumi/awsx";
 
 export interface EksClusterArgs {
     vpcCidrBlock: string;
+    desiredCapacity: number;
+    allowPublicNodeIpAddress?: boolean;
 }
 
 export class EksCluster extends pulumi.ComponentResource {
@@ -16,6 +18,7 @@ export class EksCluster extends pulumi.ComponentResource {
     constructor(name: string, args: EksClusterArgs, opts?: pulumi.ComponentResourceOptions) {
         super("cluster:aws:eksCluster", name, args, opts);
 
+        const allowPublicNodeIps = args.allowPublicNodeIpAddress ? args.allowPublicNodeIpAddress : false;
         opts = pulumi.mergeOptions(opts, { parent: this });
         const vpc = new awsx.ec2.Vpc(`${name}-vpc`, {
             enableDnsHostnames: true,
@@ -31,13 +34,13 @@ export class EksCluster extends pulumi.ComponentResource {
             privateSubnetIds: vpc.privateSubnetIds,
             // Change configuration values to change any of the following settings
             instanceType: "t3.medium",
-            desiredCapacity: 3,
-            minSize: 3,
-            maxSize: 6,
+            desiredCapacity: args.desiredCapacity,
+            minSize: args.desiredCapacity,
+            maxSize: args.desiredCapacity * 2,
             // Do not give the worker nodes public IP addresses
-            nodeAssociatePublicIpAddress: false,
+            nodeAssociatePublicIpAddress: allowPublicNodeIps,
         }, opts);
-        
+
         this.kubeConfig = cluster.kubeconfig.apply(s => <string>s);
         this.endpoint = cluster.eksCluster.endpoint;
         this.vpcId = vpc.vpcId;
