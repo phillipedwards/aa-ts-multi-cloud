@@ -6,6 +6,8 @@ export interface GkeClusterArgs {
     gcpRegion: string;
     cidrBlock: string;
     nodesPerZone: number;
+    desiredCapacity: number;
+    allowPublicNodeIpAddress?: boolean;
 }
 
 export class GkeCluster extends pulumi.ComponentResource {
@@ -68,6 +70,9 @@ export class GkeCluster extends pulumi.ComponentResource {
                 channel: "STABLE",
             },
             subnetwork: subnetwork.name,
+            serviceExternalIpsConfig: {
+                enabled: args.allowPublicNodeIpAddress ? args.allowPublicNodeIpAddress! : false,
+            },
             workloadIdentityConfig: {
                 workloadPool: `${args.gcpProject}.svc.id.goog`,
             },
@@ -80,7 +85,7 @@ export class GkeCluster extends pulumi.ComponentResource {
         });
 
         // Create a nodepool for the GKE cluster
-        new gcp.container.NodePool("gke-nodepool", {
+        const nodePool = new gcp.container.NodePool("gke-nodepool", {
             cluster: cluster.id,
             nodeCount: args.nodesPerZone,
             nodeConfig: {
@@ -89,11 +94,11 @@ export class GkeCluster extends pulumi.ComponentResource {
             },
         });
 
-        this.kubeConfig = this.createKubeConfig(cluster);
+        this.kubeConfig = this.createKubeConfig(cluster, nodePool);
         this.endpoint = cluster.endpoint;
     }
 
-    createKubeConfig(cluster: gcp.container.Cluster): pulumi.Output<string> {
+    createKubeConfig(cluster: gcp.container.Cluster, nodePool: gcp.container.NodePool): pulumi.Output<string> {
         return pulumi.jsonStringify({
             apiVersion: "v1",
             clusters: [{
@@ -111,6 +116,7 @@ export class GkeCluster extends pulumi.ComponentResource {
                 },
             }],
             "current-context": cluster.name,
+            "node-pool": nodePool.id,
             kind: "Config",
             preferences: {},
             users: [{

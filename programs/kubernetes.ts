@@ -15,7 +15,8 @@ export class Nginx extends pulumi.ComponentResource {
 
         const namespaceName = name;
         const provider = new k8s.Provider("k8s", {
-            kubeconfig: args.kubeConfig
+            kubeconfig: args.kubeConfig,
+            deleteUnreachable: true,
         }, { parent: this });
 
         opts = pulumi.mergeOptions(opts, { parent: this, provider: provider });

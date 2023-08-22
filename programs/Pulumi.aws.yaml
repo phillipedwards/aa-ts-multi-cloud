@@ -1,5 +1,7 @@
 config:
-  aws:profile: pulumi-ce
   aws:region: us-west-2
-  mulit-cloud:cloud-provider: aws
-  mulit-cloud:content: <h1>hi aws </h1>
+  multi-cloud:cidr-block: 10.100.0.0/16
+  multi-cloud:cloud-provider: aws
+  multi-cloud:content: <h1>hello-world but updated from AWS!</h1><p>Hi paypal</p>
+  multi-cloud:deploy-k8s: "true"
+  multi-cloud:desired-capacity: "3"

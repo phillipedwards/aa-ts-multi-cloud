@@ -1,3 +1,9 @@
+/*
+- Deploy kubernetes workloads across different cloud providers on EKS, GKE
+- Visbility & Control - view our ongoing deployment Pulumi cloud
+- Apply CrossGuard policies on our stacks, across multiple clouds
+*/
+
 import * as pulumi from "@pulumi/pulumi";
 import { S3Website } from "./websites/s3Website";
 import { EksCluster } from "./clusters/eksCluster";
@@ -10,6 +16,8 @@ export = async () => {
     const cloud = config.require("cloud-provider");
     const content = config.require("content");
     const cidrBlock = config.get("cidr-block") || "10.100.0.0/16";
+    const deployKubernetes = config.getBoolean("deploy-k8s");
+    const desiredCapacity = config.getNumber("desired-capacity") || 3;
 
     const tags = {
         "stack": pulumi.getStack(),
@@ -34,16 +42,18 @@ export = async () => {
                 tags: tags
             });
 
-            const eksCluster = new EksCluster("eksCluster", {
-                vpcCidrBlock: cidrBlock,
-            });
+            if (deployKubernetes?.valueOf()) {
+                const eksCluster = new EksCluster("eksCluster", {
+                    vpcCidrBlock: cidrBlock,
+                    desiredCapacity,
+                });
 
-            stackOutput = {
-                kubeConfig: eksCluster.kubeConfig,
-                clusterEndpoint: eksCluster.endpoint,
-                vpcId: eksCluster.vpcId,
-                webSiteUrl: awsSite.websiteUrl,
-            };
+                stackOutput.kubeConfig = eksCluster.kubeConfig;
+                stackOutput.clusterEndpoint = eksCluster.endpoint;
+                stackOutput.vpcId = eksCluster.vpcId;
+            }
+
+            stackOutput.webSiteUrl = awsSite.websiteUrl;
             break;
 
         case "gcp":
@@ -57,19 +67,21 @@ export = async () => {
                 tags: tags
             });
 
-            const gkeCluster = new GkeCluster("gkeCluster", {
-                cidrBlock: cidrBlock,
-                gcpProject: project,
-                gcpRegion: region,
-                nodesPerZone: 1,
-            });
+            if (deployKubernetes) {
+                const gkeCluster = new GkeCluster("gkeCluster", {
+                    cidrBlock: cidrBlock,
+                    gcpProject: project,
+                    gcpRegion: region,
+                    nodesPerZone: 1,
+                    desiredCapacity
+                });
 
-            stackOutput = {
-                kubeConfig: gkeCluster.kubeConfig,
-                clusterEndpoint: gkeCluster.endpoint,
-                vpcId: gkeCluster.vpcId,
-                webSiteUrl: gcpSite.websiteUrl,
-            };
+                stackOutput.kubeConfig = gkeCluster.kubeConfig;
+                stackOutput.clusterEndpoint = gkeCluster.endpoint;
+                stackOutput.vpcId = gkeCluster.vpcId;
+            }
+
+            stackOutput.webSiteUrl = gcpSite.websiteUrl;
             break;
 
         case "azure":
@@ -79,13 +91,15 @@ export = async () => {
             throw new Error(`Unsupported cloud ${cloud} encountered. Use AWS or GCP`);
     }
 
-    // Using the kubeconfig from either EKS or GKE we will construct simple k8s nginx example
-    const nginx = new Nginx("nginx", {
-        kubeConfig: stackOutput.kubeConfig!
-    });
+    if (deployKubernetes?.valueOf()) {
+        // Using the kubeconfig from either EKS or GKE we will construct simple k8s nginx example
+        const nginx = new Nginx("nginx", {
+            kubeConfig: stackOutput.kubeConfig!
+        });
 
-    stackOutput.serviceEndpoint = nginx.endpoint;
-    stackOutput.serviceIp = nginx.ip;
+        stackOutput.serviceEndpoint = nginx.endpoint;
+        stackOutput.serviceIp = nginx.ip;
+    }
 
     return stackOutput;
 };

@@ -1,5 +1,6 @@
 config:
   gcp:project: pulumi-ce-team
   gcp:region: us-west1
-  mulit-cloud:cloud-provider: gcp
-  mulit-cloud:content: <h1>hi aws </h1>
+  multi-cloud:cloud-provider: gcp
+  multi-cloud:content: <h1>Hi Paypal </h1>
+  multi-cloud:deploy-k8s: true
