@@ -7,7 +7,6 @@ import {
 } from "@pulumi/pulumi/automation";
 import * as upath from "upath";
 import * as express from "express";
-import { createPulumiProgram } from "./pulumiProgram";
 
 const projectName = "multi-cloud";
 const projectDir = upath.joinSafe(__dirname, "..", "..", "programs");
@@ -22,14 +21,6 @@ export const createHandler: express.RequestHandler = async (req, res) => {
         deployK8s,
         desiredCapacity
     } = req.body;
-
-    // const stackName = req.body.id;
-    // const content = req.body.content as string;
-    // const cloudProvider = req.body.provider as string;
-    // const cidrBlock = req.body.cidr as string;
-    // const deployKubernetes = req.body.deployKubernetes as boolean;
-    // const instanceType = req.body.instanceType as string;
-    // const desiredCapacity = req.body.desiredCapacity as number;
 
     console.log(req.body);
     try {
@@ -55,7 +46,9 @@ export const createHandler: express.RequestHandler = async (req, res) => {
             url: upRes.outputs.webSiteUrl?.value,
             serviceIp: upRes.outputs.serviceIp?.value
         });
+
     } catch (e) {
+        console.log(e);
         if (e instanceof StackAlreadyExistsError) {
             res.status(409).send(`stack "${id}" already exists`);
         } else {
@@ -81,11 +74,9 @@ export const updateHandler: express.RequestHandler = async (req, res) => {
             workDir: projectDir,
         });
 
-        console.log(`deployK8s: ${deployK8s}`);
-
         await configValuesForProvider(stack, provider);
         await stack.setConfig("content", { value: content });
-        await stack.setConfig("cloud-provider", { value: provider });
+        await stack.setConfig("cloud-provider", { value: provider.trim() });
         await stack.setConfig("cidr-block", { value: cidr });
         await stack.setConfig("deploy-k8s", { value: deployK8s === undefined ? false : deployK8s });
         await stack.setConfig("desired-capacity", { value: desiredCapacity == undefined ? 3 : desiredCapacity });
@@ -100,6 +91,7 @@ export const updateHandler: express.RequestHandler = async (req, res) => {
             serviceIp: upRes.outputs.serviceIp?.value
         });
     } catch (e) {
+        console.log(e);
         if (e instanceof StackNotFoundError) {
             res.status(404).send(`stack "${id}" does not exist`);
         } else if (e instanceof ConcurrentUpdateError) {
@@ -118,6 +110,7 @@ export const listHandler: express.RequestHandler = async (req, res) => {
         const stacks = await ws.listStacks();
         res.json({ ids: stacks.map(s => s.name) });
     } catch (e) {
+        console.log(e);
         res.status(500).send(e);
     }
 };
@@ -140,6 +133,7 @@ export const getHandler: express.RequestHandler = async (req, res) => {
             serviceIp: outs.serviceIp?.value
         });
     } catch (e) {
+        console.log(e);
         if (e instanceof StackNotFoundError) {
             res.status(404).send(`stack "${stackName}" does not exist`);
         } else {
@@ -163,6 +157,7 @@ export const deleteHandler: express.RequestHandler = async (req, res) => {
         await stack.workspace.removeStack(stackName);
         res.status(200).end();
     } catch (e) {
+        console.log(e);
         if (e instanceof StackNotFoundError) {
             res.status(404).send(`stack "${stackName}" does not exist`);
         } else if (e instanceof ConcurrentUpdateError) {
@@ -174,7 +169,7 @@ export const deleteHandler: express.RequestHandler = async (req, res) => {
 };
 
 const configValuesForProvider = async (stack: Stack, provider: string) => {
-    switch (provider) {
+    switch (provider.trim()) {
         case "aws":
             await stack.setConfig("aws:region", { value: "us-west-2" });
             break;
